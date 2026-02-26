@@ -1,109 +1,85 @@
-const { Telegraf, Markup } = require("telegraf");
-const questions = require("./questions"); // questions.js faylini shu joyda import qilamiz
+const { Telegraf, Markup } = require('telegraf');
+const questions = require('./questions'); // Sizning 1200 ta savol faylingiz
+const bot = new Telegraf('8728454241:AAGgph192eIAOZpR6VtfqkjrN7mkwQ58W88'); // TOKEN ni almashtiring
 
-// Bu yerga sizning bot tokeningizni qo'ying
-const bot = new Telegraf("8728454241:AAGgph192eIAOZpR6VtfqkjrN7mkwQ58W88");
+// Foydalanuvchilar uchun vaqtinchalik holat saqlash
+const users = {};
 
-const userStates = {}; // Foydalanuvchi holatlarini saqlash uchun
-
-// Start komandasi
+// Start tugmasi
 bot.start((ctx) => {
   ctx.reply(
-    "Salom! Siz prava imtihoniga tayyorlovchi botga kirdingiz.\n\nTestni boshlash uchun tugmani bosing.",
-    Markup.inlineKeyboard([
-      [Markup.button.callback("Testni boshlash", "START_TEST")]
-    ])
+    `Assalomu alaykum! Testga tayyorlanamiz.\n\n"Testni boshlash" tugmasini bosing.`,
+    Markup.inlineKeyboard([[Markup.button.callback('Testni boshlash', 'start_test')]])
   );
-  userStates[ctx.from.id] = null; // Avval holatni tozalaymiz
 });
 
 // Testni boshlash tugmasi bosilganda
-bot.action("START_TEST", async (ctx) => {
+bot.action('start_test', async (ctx) => {
   const userId = ctx.from.id;
-
-  // 1200 savoldan random 20 tanlaymiz
-  const shuffled = questions.sort(() => 0.5 - Math.random());
-  const testQuestions = shuffled.slice(0, 20);
-
-  // Foydalanuvchi uchun holat yaratamiz
-  userStates[userId] = {
-    questions: testQuestions,
-    current: 0,
+  // Foydalanuvchi holatini yaratish
+  users[userId] = {
     score: 0,
-    messageIds: [] // keyinchalik message o'chirish uchun
+    current: 0,
+    questions: shuffle(questions).slice(0, 20) // Random 20 savol
   };
 
-  // Birinchi savolni yuboramiz
-  await sendQuestion(ctx, userId);
+  await ctx.deleteMessage(); // oldingi tugmani o‘chirish
+  sendQuestion(ctx, userId);
 });
 
-// Savolni yuboradigan funksiya
+// Savolni yuborish funksiyasi
 async function sendQuestion(ctx, userId) {
-  const state = userStates[userId];
-  if (!state) return;
+  const user = users[userId];
+  const q = user.questions[user.current];
 
-  // Agar test tugagan bo'lsa
-  if (state.current >= state.questions.length) {
-    await ctx.reply(
-      `Test tugadi!\nSiz ${state.score}/${state.questions.length} to'g'ri javob berdingiz.\n\nYana test ishlash uchun quyidagi tugmani bosing.`,
-      Markup.inlineKeyboard([
-        [Markup.button.callback("Testni boshlash", "START_TEST")]
-      ])
-    );
-    userStates[userId] = null; // Holatni tozalaymiz
-    return;
+  const buttons = q.options.map((opt) => Markup.button.callback(opt, `answer_${opt}`));
+  const keyboard = Markup.inlineKeyboard(buttons, { columns: 2 });
+
+  if (q.image) {
+    await ctx.replyWithPhoto({ url: q.image }, { caption: `Savol ${user.current + 1}/20\n\n${q.question}`, reply_markup: keyboard.reply_markup });
+  } else {
+    await ctx.reply(`Savol ${user.current + 1}/20\n\n${q.question}`, keyboard);
   }
-
-  const q = state.questions[state.current];
-
-  // Inline tugmalar yaratamiz
-  const buttons = q.options.map((opt, i) => Markup.button.callback(opt, `ANSWER_${i}`));
-
-  // Inline keyboard 2 ta ustunli bo'lishi uchun
-  const keyboard = [];
-  for (let i = 0; i < buttons.length; i += 2) {
-    keyboard.push(buttons.slice(i, i + 2));
-  }
-
-  // Savol yuboriladi
-  const message = await ctx.reply(
-    `Savol ${state.current + 1}/${state.questions.length}:\n\n${q.question}`,
-    Markup.inlineKeyboard(keyboard)
-  );
-
-  state.messageIds.push(message.message_id);
 }
 
-// Javobni tekshiradigan handler
-bot.action(/ANSWER_(\d+)/, async (ctx) => {
+// Javob tugmasi bosilganda
+bot.action(/answer_(.+)/, async (ctx) => {
   const userId = ctx.from.id;
-  const state = userStates[userId];
-  if (!state) return ctx.answerCbQuery();
+  const user = users[userId];
+  const answer = ctx.match[1];
+  const q = user.questions[user.current];
 
-  const selected = parseInt(ctx.match[1]);
-  const q = state.questions[state.current];
+  if (!user) return ctx.answerCbQuery('Testni boshlang.');
 
-  // Javob to'g'ri bo'lsa
-  if (selected === q.correct) state.score++;
+  if (answer === q.correct) user.score++;
 
-  state.current++;
+  user.current++;
 
-  // Oldingi savolni o'chirib qo'yamiz
-  for (const msgId of state.messageIds) {
-    try {
-      await ctx.deleteMessage(msgId);
-    } catch (err) {}
+  await ctx.deleteMessage(); // oldingi savolni o‘chirish
+
+  if (user.current < user.questions.length) {
+    sendQuestion(ctx, userId);
+  } else {
+    // Test tugadi
+    await ctx.reply(`Test tugadi! Siz ${user.score}/${user.questions.length} to‘g‘ri javob berdingiz.`);
+    await ctx.reply(
+      `Yana testni boshlash uchun tugmani bosing.`,
+      Markup.inlineKeyboard([[Markup.button.callback('Testni boshlash', 'start_test')]])
+    );
+    delete users[userId]; // foydalanuvchi holatini tozalash
   }
-  state.messageIds = [];
 
-  // Keyingi savolni yuboramiz
-  await sendQuestion(ctx, userId);
+  await ctx.answerCbQuery(); // tugmani bosgan signalni olib tashlash
 });
 
-// Botni ishga tushiramiz
-bot.launch();
-console.log("Bot ishga tushdi 🚀");
+// Random array
+function shuffle(array) {
+  const arr = array.slice();
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
 
-// Hot-reload uchun
-process.once("SIGINT", () => bot.stop("SIGINT"));
-process.once("SIGTERM", () => bot.stop("SIGTERM"));
+bot.launch().then(() => console.log('Bot ishga tushdi 🚀'));
