@@ -4,7 +4,7 @@ const questions = require('./questions');
 
 const BOT_TOKEN = '8728454241:AAGgph192eIAOZpR6VtfqkjrN7mkwQ58W88';  // Telegram bot tokeningizni qo‘ying
 const PORT = process.env.PORT || 3000;   // Railway sizga port beradi
-const DOMAIN = 'https://SIZNING_APP.onrender.com'; // Railway app URL
+const DOMAIN = 'https://pravatest-1.onrender.com'; // Railway app URL
 
 const bot = new Telegraf(BOT_TOKEN);
 
