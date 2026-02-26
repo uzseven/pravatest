@@ -1,147 +1,109 @@
-const TelegramBot = require("node-telegram-bot-api");
+const { Telegraf, Markup } = require("telegraf");
+const questions = require("./questions"); // questions.js faylini shu joyda import qilamiz
 
-const token = process.env.BOT_TOKEN;
-const bot = new TelegramBot(token, { polling: true });
+// Bu yerga sizning bot tokeningizni qo'ying
+const bot = new Telegraf("8728454241:AAGgph192eIAOZpR6VtfqkjrN7mkwQ58W88");
 
-console.log("Bot ishga tushdi 🚀");
+const userStates = {}; // Foydalanuvchi holatlarini saqlash uchun
 
-// ====== TEST SAVOLLARI ======
-const questions = [
-  {
-    text: "Qizil svetofor nimani anglatadi?",
-    options: ["To‘xta", "Yurish mumkin", "Sekin yur", "Chapga buril"],
-    correct: 0,
-  },
-  {
-    text: "Piyodalar o‘tish joyida haydovchi nima qilishi kerak?",
-    options: ["Tezlashishi", "Signal berishi", "To‘xtashi", "Burilishi"],
-    correct: 2,
-  },
-  {
-    text: "Sariq chiroq nimani bildiradi?",
-    options: ["Tayyorlan", "To‘xta", "Erkin yur", "Chapga buril"],
-    correct: 0,
-  },
-  {
-    text: "Avtomagistralda maksimal tezlik?",
-    options: ["70", "90", "110", "150"],
-    correct: 2,
-  },
-  {
-    text: "Qaysi belgi taqiqlovchi?",
-    options: ["Qizil doira", "Yashil to‘rtburchak", "Ko‘k uchburchak", "Oq kvadrat"],
-    correct: 0,
+// Start komandasi
+bot.start((ctx) => {
+  ctx.reply(
+    "Salom! Siz prava imtihoniga tayyorlovchi botga kirdingiz.\n\nTestni boshlash uchun tugmani bosing.",
+    Markup.inlineKeyboard([
+      [Markup.button.callback("Testni boshlash", "START_TEST")]
+    ])
+  );
+  userStates[ctx.from.id] = null; // Avval holatni tozalaymiz
+});
+
+// Testni boshlash tugmasi bosilganda
+bot.action("START_TEST", async (ctx) => {
+  const userId = ctx.from.id;
+
+  // 1200 savoldan random 20 tanlaymiz
+  const shuffled = questions.sort(() => 0.5 - Math.random());
+  const testQuestions = shuffled.slice(0, 20);
+
+  // Foydalanuvchi uchun holat yaratamiz
+  userStates[userId] = {
+    questions: testQuestions,
+    current: 0,
+    score: 0,
+    messageIds: [] // keyinchalik message o'chirish uchun
+  };
+
+  // Birinchi savolni yuboramiz
+  await sendQuestion(ctx, userId);
+});
+
+// Savolni yuboradigan funksiya
+async function sendQuestion(ctx, userId) {
+  const state = userStates[userId];
+  if (!state) return;
+
+  // Agar test tugagan bo'lsa
+  if (state.current >= state.questions.length) {
+    await ctx.reply(
+      `Test tugadi!\nSiz ${state.score}/${state.questions.length} to'g'ri javob berdingiz.\n\nYana test ishlash uchun quyidagi tugmani bosing.`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("Testni boshlash", "START_TEST")]
+      ])
+    );
+    userStates[userId] = null; // Holatni tozalaymiz
+    return;
   }
-];
 
-// ====== USER SESSION ======
-const userSessions = {};
+  const q = state.questions[state.current];
 
-// Random 20 savol (yoki mavjud bo‘lsa hammasi)
-function getRandomQuestions() {
-  return questions
-    .sort(() => 0.5 - Math.random())
-    .slice(0, 5); // hozir 5 ta, xohlasangiz 20 qiling
+  // Inline tugmalar yaratamiz
+  const buttons = q.options.map((opt, i) => Markup.button.callback(opt, `ANSWER_${i}`));
+
+  // Inline keyboard 2 ta ustunli bo'lishi uchun
+  const keyboard = [];
+  for (let i = 0; i < buttons.length; i += 2) {
+    keyboard.push(buttons.slice(i, i + 2));
+  }
+
+  // Savol yuboriladi
+  const message = await ctx.reply(
+    `Savol ${state.current + 1}/${state.questions.length}:\n\n${q.question}`,
+    Markup.inlineKeyboard(keyboard)
+  );
+
+  state.messageIds.push(message.message_id);
 }
 
-// ====== START ======
-bot.onText(/\/start/, (msg) => {
-  const chatId = msg.chat.id;
+// Javobni tekshiradigan handler
+bot.action(/ANSWER_(\d+)/, async (ctx) => {
+  const userId = ctx.from.id;
+  const state = userStates[userId];
+  if (!state) return ctx.answerCbQuery();
 
-  bot.sendMessage(
-    chatId,
-    "Salom! 👋\nPrava test botiga xush kelibsiz.\n\nTestni boshlash uchun tugmani bosing.",
-    {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: "🚀 Testni boshlash", callback_data: "start_test" }]
-        ],
-      },
-    }
-  );
+  const selected = parseInt(ctx.match[1]);
+  const q = state.questions[state.current];
+
+  // Javob to'g'ri bo'lsa
+  if (selected === q.correct) state.score++;
+
+  state.current++;
+
+  // Oldingi savolni o'chirib qo'yamiz
+  for (const msgId of state.messageIds) {
+    try {
+      await ctx.deleteMessage(msgId);
+    } catch (err) {}
+  }
+  state.messageIds = [];
+
+  // Keyingi savolni yuboramiz
+  await sendQuestion(ctx, userId);
 });
 
-// ====== CALLBACK ======
-bot.on("callback_query", (query) => {
-  const chatId = query.message.chat.id;
-  const messageId = query.message.message_id;
-  const data = query.data;
+// Botni ishga tushiramiz
+bot.launch();
+console.log("Bot ishga tushdi 🚀");
 
-  // ===== TEST BOSHLASH =====
-  if (data === "start_test") {
-    userSessions[chatId] = {
-      current: 0,
-      score: 0,
-      questions: getRandomQuestions(),
-    };
-
-    const q = userSessions[chatId].questions[0];
-
-    bot.editMessageText(
-      `📘 Savol 1/${userSessions[chatId].questions.length}\n\n${q.text}`,
-      {
-        chat_id: chatId,
-        message_id: messageId,
-        reply_markup: {
-          inline_keyboard: q.options.map((opt, i) => [
-            { text: opt, callback_data: `ans_${i}` },
-          ]),
-        },
-      }
-    );
-  }
-
-  // ===== JAVOB BOSILGANDA =====
-  if (data.startsWith("ans_")) {
-    const session = userSessions[chatId];
-    if (!session) return;
-
-    const answerIndex = parseInt(data.split("_")[1]);
-    const currentQuestion = session.questions[session.current];
-
-    if (answerIndex === currentQuestion.correct) {
-      session.score++;
-    }
-
-    session.current++;
-
-    // ===== TEST TUGADI =====
-    if (session.current >= session.questions.length) {
-      return bot.editMessageText(
-        `✅ Test tugadi!\n\n🎯 Natijangiz: ${session.score}/${session.questions.length}`,
-        {
-          chat_id: chatId,
-          message_id: messageId,
-          reply_markup: {
-            inline_keyboard: [
-              [
-                {
-                  text: "🔄 Testni yana boshlash",
-                  callback_data: "start_test",
-                },
-              ],
-            ],
-          },
-        }
-      );
-    }
-
-    // ===== KEYINGI SAVOL =====
-    const nextQ = session.questions[session.current];
-
-    bot.editMessageText(
-      `📘 Savol ${session.current + 1}/${session.questions.length}\n\n${nextQ.text}`,
-      {
-        chat_id: chatId,
-        message_id: messageId,
-        reply_markup: {
-          inline_keyboard: nextQ.options.map((opt, i) => [
-            { text: opt, callback_data: `ans_${i}` },
-          ]),
-        },
-      }
-    );
-  }
-
-  bot.answerCallbackQuery(query.id);
-});
+// Hot-reload uchun
+process.once("SIGINT", () => bot.stop("SIGINT"));
+process.once("SIGTERM", () => bot.stop("SIGTERM"));
