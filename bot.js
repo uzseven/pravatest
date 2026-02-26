@@ -1,85 +1,82 @@
-const { Telegraf, Markup } = require('telegraf');
-const questions = require('./questions'); // Sizning 1200 ta savol faylingiz
-const bot = new Telegraf('8728454241:AAGgph192eIAOZpR6VtfqkjrN7mkwQ58W88'); // TOKEN ni almashtiring
+// bot.js
+const { Telegraf } = require('telegraf');
+const questions = require('./questions');
 
-// Foydalanuvchilar uchun vaqtinchalik holat saqlash
-const users = {};
+const BOT_TOKEN = '8728454241:AAGgph192eIAOZpR6VtfqkjrN7mkwQ58W88';  // Telegram bot tokeningizni qo‘ying
+const PORT = process.env.PORT || 3000;   // Railway sizga port beradi
+const DOMAIN = 'https://SIZNING_APP.onrender.com'; // Railway app URL
 
-// Start tugmasi
+const bot = new Telegraf(BOT_TOKEN);
+
+let userSessions = {}; // foydalanuvchi sessionlarini saqlash
+
+// Start komandasi
 bot.start((ctx) => {
-  ctx.reply(
-    `Assalomu alaykum! Testga tayyorlanamiz.\n\n"Testni boshlash" tugmasini bosing.`,
-    Markup.inlineKeyboard([[Markup.button.callback('Testni boshlash', 'start_test')]])
-  );
+    ctx.reply("Assalomu alaykum! Testni boshlash uchun pastdagi tugmani bosing.", {
+        reply_markup: {
+            inline_keyboard: [[{ text: "Testni boshlash", callback_data: "start_test" }]]
+        }
+    });
 });
 
-// Testni boshlash tugmasi bosilganda
-bot.action('start_test', async (ctx) => {
-  const userId = ctx.from.id;
-  // Foydalanuvchi holatini yaratish
-  users[userId] = {
-    score: 0,
-    current: 0,
-    questions: shuffle(questions).slice(0, 20) // Random 20 savol
-  };
+// Callback handler
+bot.on('callback_query', async (ctx) => {
+    const userId = ctx.from.id;
 
-  await ctx.deleteMessage(); // oldingi tugmani o‘chirish
-  sendQuestion(ctx, userId);
+    if (!userSessions[userId]) {
+        userSessions[userId] = { current: 0, score: 0 };
+    }
+
+    if (ctx.callbackQuery.data === 'start_test') {
+        userSessions[userId] = { current: 0, score: 0 };
+        await sendQuestion(ctx, userId);
+    } else {
+        // Javobni tekshirish
+        const session = userSessions[userId];
+        const currentQ = questions[session.current];
+
+        if (ctx.callbackQuery.data === currentQ.correct) {
+            session.score++;
+        }
+
+        session.current++;
+
+        if (session.current >= 20) {
+            await ctx.editMessageText(`Test tugadi!\nNatija: ${session.score}/20`);
+            await ctx.reply("Yana testni boshlash uchun tugmani bosing.", {
+                reply_markup: {
+                    inline_keyboard: [[{ text: "Testni boshlash", callback_data: "start_test" }]]
+                }
+            });
+        } else {
+            await sendQuestion(ctx, userId);
+        }
+    }
+
+    await ctx.answerCbQuery();
 });
 
 // Savolni yuborish funksiyasi
 async function sendQuestion(ctx, userId) {
-  const user = users[userId];
-  const q = user.questions[user.current];
+    const session = userSessions[userId];
+    const q = questions[session.current];
 
-  const buttons = q.options.map((opt) => Markup.button.callback(opt, `answer_${opt}`));
-  const keyboard = Markup.inlineKeyboard(buttons, { columns: 2 });
+    const optionsButtons = q.options.map(opt => [{ text: opt, callback_data: opt }]);
 
-  if (q.image) {
-    await ctx.replyWithPhoto({ url: q.image }, { caption: `Savol ${user.current + 1}/20\n\n${q.question}`, reply_markup: keyboard.reply_markup });
-  } else {
-    await ctx.reply(`Savol ${user.current + 1}/20\n\n${q.question}`, keyboard);
-  }
+    await ctx.reply(
+        `Savol ${session.current + 1}/20:\n\n${q.question}`,
+        {
+            reply_markup: { inline_keyboard: optionsButtons }
+        }
+    );
 }
 
-// Javob tugmasi bosilganda
-bot.action(/answer_(.+)/, async (ctx) => {
-  const userId = ctx.from.id;
-  const user = users[userId];
-  const answer = ctx.match[1];
-  const q = user.questions[user.current];
-
-  if (!user) return ctx.answerCbQuery('Testni boshlang.');
-
-  if (answer === q.correct) user.score++;
-
-  user.current++;
-
-  await ctx.deleteMessage(); // oldingi savolni o‘chirish
-
-  if (user.current < user.questions.length) {
-    sendQuestion(ctx, userId);
-  } else {
-    // Test tugadi
-    await ctx.reply(`Test tugadi! Siz ${user.score}/${user.questions.length} to‘g‘ri javob berdingiz.`);
-    await ctx.reply(
-      `Yana testni boshlash uchun tugmani bosing.`,
-      Markup.inlineKeyboard([[Markup.button.callback('Testni boshlash', 'start_test')]])
-    );
-    delete users[userId]; // foydalanuvchi holatini tozalash
-  }
-
-  await ctx.answerCbQuery(); // tugmani bosgan signalni olib tashlash
+// Webhook bilan launch
+bot.launch({
+    webhook: {
+        domain: DOMAIN,
+        port: PORT
+    }
 });
 
-// Random array
-function shuffle(array) {
-  const arr = array.slice();
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-
-bot.launch().then(() => console.log('Bot ishga tushdi 🚀'));
+console.log("Bot ishga tushdi 🚀");
