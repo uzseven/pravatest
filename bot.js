@@ -19,7 +19,6 @@ function shuffle(array) {
     return arr;
 }
 
-
 // START
 bot.start(async (ctx) => {
     await cleanChat(ctx);
@@ -56,9 +55,15 @@ bot.on('callback_query', async (ctx) => {
         };
 
         await sendQuestion(ctx, userId);
+    } 
+    else if (data === 'finish_test') {
+        // Foydalanuvchi testni hozir tugatdi
+        const session = userSessions[userId];
+        session.current = session.questions.length; // testni tugatish
+        await ctx.answerCbQuery("Test yakunlandi!");
+        await showResult(ctx, userId); // natijani ko‘rsatish
     }
     else {
-
         const session = userSessions[userId];
         const currentQ = session.questions[session.current];
 
@@ -85,28 +90,7 @@ bot.on('callback_query', async (ctx) => {
 
         // TEST TUGADI
         if (session.current >= session.questions.length) {
-
-            let resultText = `Test tugadi!\n\nNatija: ${session.score}/${session.questions.length}\n\n`;
-
-            if (session.wrongAnswers.length > 0) {
-                resultText += "❌ Xato javoblar:\n\n";
-                session.wrongAnswers.forEach((w, i) => {
-                    resultText += `${i + 1}) ${w.question}\n`;
-                    resultText += `Sizning javobingiz: ${w.userAnswer}\n`;
-                    resultText += `To‘g‘ri javob: ${w.correctAnswer}\n\n`;
-                });
-            } else {
-                resultText += "🎉 Barcha javoblar to‘g‘ri!";
-            }
-
-            const msg = await ctx.reply(resultText, {
-                reply_markup: {
-                    inline_keyboard: [[{ text: "Testni boshlash", callback_data: "start_test" }]]
-                }
-            });
-
-            session.messages.push(msg.message_id);
-
+            await showResult(ctx, userId);
         } else {
             await sendQuestion(ctx, userId);
         }
@@ -121,14 +105,43 @@ async function sendQuestion(ctx, userId) {
     const q = session.questions[session.current];
 
     const shuffledOptions = shuffle([...q.options]);
-    const buttons = shuffledOptions.map(o => [{ text: o, callback_data: o }]);
+    const optionButtons = shuffledOptions.map(o => [{ text: o, callback_data: o }]);
+
+    // Testni yakunlash tugmasi har doim savol ostida
+    optionButtons.push([{ text: "Testni yakunlash", callback_data: "finish_test" }]);
 
     const sent = await ctx.reply(
         `Savol ${session.current + 1}/20\n\n${q.question}`,
-        { reply_markup: { inline_keyboard: buttons } }
+        { reply_markup: { inline_keyboard: optionButtons } }
     );
 
     session.messages.push(sent.message_id);
+}
+
+// NATIJANI KO'RSATISH
+async function showResult(ctx, userId) {
+    const session = userSessions[userId];
+
+    let resultText = `Test tugadi!\n\nNatija: ${session.score}/${session.questions.length}\n\n`;
+
+    if (session.wrongAnswers.length > 0) {
+        resultText += "❌ Xato javoblar:\n\n";
+        session.wrongAnswers.forEach((w, i) => {
+            resultText += `${i + 1}) ${w.question}\n`;
+            resultText += `Sizning javobingiz: ${w.userAnswer}\n`;
+            resultText += `To‘g‘ri javob: ${w.correctAnswer}\n\n`;
+        });
+    } else {
+        resultText += "🎉 Barcha javoblar to‘g‘ri!";
+    }
+
+    const msg = await ctx.reply(resultText, {
+        reply_markup: {
+            inline_keyboard: [[{ text: "Testni boshlash", callback_data: "start_test" }]]
+        }
+    });
+
+    session.messages.push(msg.message_id);
 }
 
 // CHAT TOZALASH
