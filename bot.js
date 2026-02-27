@@ -1,4 +1,3 @@
-
 const { Telegraf } = require('telegraf');
 const questions = require('./questions');
 
@@ -30,9 +29,7 @@ bot.on('callback_query', async (ctx) => {
     const userId = ctx.from.id;
 
     if (!userSessions[userId]) {
-        userSessions[userId] = {
-            messages: []
-        };
+        userSessions[userId] = { messages: [] };
     }
 
     const data = ctx.callbackQuery.data;
@@ -59,6 +56,7 @@ bot.on('callback_query', async (ctx) => {
         const session = userSessions[userId];
         const currentQ = session.questions[session.current];
 
+        // Javob tekshirish
         if (data === currentQ.correct) {
             session.score++;
         } else {
@@ -69,8 +67,17 @@ bot.on('callback_query', async (ctx) => {
             });
         }
 
+        // Oldingi savolni o'chirish
+        if (session.messages.length > 0) {
+            const lastMsgId = session.messages.pop();
+            try {
+                await ctx.telegram.deleteMessage(ctx.chat.id, lastMsgId);
+            } catch {}
+        }
+
         session.current++;
 
+        // TEST TUGADI
         if (session.current >= session.questions.length) {
 
             let resultText = `Test tugadi!\n\nNatija: ${session.score}/${session.questions.length}\n\n`;
@@ -108,10 +115,7 @@ async function sendQuestion(ctx, userId) {
     const q = session.questions[session.current];
 
     const shuffledOptions = shuffle([...q.options]);
-
-    const buttons = shuffledOptions.map(o => [
-        { text: o, callback_data: o }
-    ]);
+    const buttons = shuffledOptions.map(o => [{ text: o, callback_data: o }]);
 
     const sent = await ctx.reply(
         `Savol ${session.current + 1}/20\n\n${q.question}`,
@@ -131,6 +135,7 @@ async function cleanChat(ctx) {
                 await ctx.telegram.deleteMessage(ctx.chat.id, msgId);
             } catch {}
         }
+        userSessions[userId].messages = [];
     }
 }
 
