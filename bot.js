@@ -56,9 +56,18 @@ bot.on('callback_query', async (ctx) => {
 
         await sendQuestion(ctx, userId);
     } 
+    // TESTNI YAKUNLASH
     else if (data === 'finish_test') {
-        // Foydalanuvchi testni hozir tugatdi
         const session = userSessions[userId];
+
+        // Oxirgi savolni o'chirish
+        if (session.messages.length > 0) {
+            const lastMsgId = session.messages.pop();
+            try {
+                await ctx.telegram.deleteMessage(ctx.chat.id, lastMsgId);
+            } catch {}
+        }
+
         session.current = session.questions.length; // testni tugatish
         await ctx.answerCbQuery("Test yakunlandi❗️");
         await showResult(ctx, userId); // natijani ko‘rsatish
