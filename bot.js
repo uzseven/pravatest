@@ -22,9 +22,9 @@ function shuffle(array) {
 // START
 bot.start(async (ctx) => {
     await cleanChat(ctx);
-    ctx.reply("Testni boshlash uchun tugmani bosing.", {
+    ctx.reply("Testni boshlash uchun tugmani bosing 👇", {
         reply_markup: {
-            inline_keyboard: [[{ text: "Testni boshlash", callback_data: "start_test" }]]
+            inline_keyboard: [[{ text: "Testni boshlash ♻️", callback_data: "start_test" }]]
         }
     });
 });
@@ -60,7 +60,7 @@ bot.on('callback_query', async (ctx) => {
         // Foydalanuvchi testni hozir tugatdi
         const session = userSessions[userId];
         session.current = session.questions.length; // testni tugatish
-        await ctx.answerCbQuery("Test yakunlandi!");
+        await ctx.answerCbQuery("Test yakunlandi❗️");
         await showResult(ctx, userId); // natijani ko‘rsatish
     }
     else {
@@ -108,7 +108,7 @@ async function sendQuestion(ctx, userId) {
     const optionButtons = shuffledOptions.map(o => [{ text: o, callback_data: o }]);
 
     // Testni yakunlash tugmasi har doim savol ostida
-    optionButtons.push([{ text: "Testni yakunlash", callback_data: "finish_test" }]);
+    optionButtons.push([{ text: "Testni yakunlash ✅", callback_data: "finish_test" }]);
 
     const sent = await ctx.reply(
         `Savol ${session.current + 1}/20\n\n${q.question}`,
@@ -137,7 +137,7 @@ async function showResult(ctx, userId) {
 
     const msg = await ctx.reply(resultText, {
         reply_markup: {
-            inline_keyboard: [[{ text: "Testni boshlash", callback_data: "start_test" }]]
+            inline_keyboard: [[{ text: "Testni boshlash ♻️", callback_data: "start_test" }]]
         }
     });
 

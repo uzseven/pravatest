@@ -5,7 +5,7 @@ const questions = [];
 // Savollar mavzulari (Yo‘l Harakati Qoidalari)
 const baseQuestions = [
   {
-    question: "Yo‘l belgilari nima uchun qo‘yiladi?",
+    question: "Yo‘l belgilari nima uchun qo‘yiladi❓",
     correct: "Harakatni tartibga solish uchun",
     wrong: [
       "Yo‘lni chiroyli qilish uchun",
@@ -14,7 +14,7 @@ const baseQuestions = [
     ]
   },
   {
-    question: "Qizil svetofor chirog‘ida nima qilish kerak?",
+    question: "Qizil svetofor chirog‘ida nima qilish kerak❓",
     correct: "To‘xtash kerak",
     wrong: [
       "Davom etish mumkin",
@@ -23,7 +23,7 @@ const baseQuestions = [
     ]
   },
   {
-    question: "Haydovchi spirtli ichimlikdan keyin transport boshqarishi mumkinmi?",
+    question: "Haydovchi spirtli ichimlikdan keyin transport boshqarishi mumkinmi❓",
     correct: "Yo‘q, mumkin emas",
     wrong: [
       "Faqat kichik yo‘llarda bo‘lsa mumkin",
@@ -32,7 +32,7 @@ const baseQuestions = [
     ]
   },
   {
-    question: "Piyodalar yo‘lagida transport harakatlanishi mumkinmi?",
+    question: "Piyodalar yo‘lagida transport harakatlanishi mumkinmi❓",
     correct: "Yo‘q, mumkin emas",
     wrong: [
       "Faqat tez kelsa bo‘ladi",
@@ -41,7 +41,7 @@ const baseQuestions = [
     ]
   },
   {
-    question: "Chapga burilishdan oldin nima qilish kerak?",
+    question: "Chapga burilishdan oldin nima qilish kerak❓",
     correct: "Yo‘l berish kerak",
     wrong: [
       "Tezlikni oshirish kerak",
@@ -50,7 +50,7 @@ const baseQuestions = [
     ]
   },
   {
-    question: "Yo‘lni kesib o‘tishda kimga ustunlik beriladi?",
+    question: "Yo‘lni kesib o‘tishda kimga ustunlik beriladi❓",
     correct: "Piyodalar uchun",
     wrong: [
       "Fakr yo‘l boshqaruvchiga",
@@ -59,7 +59,7 @@ const baseQuestions = [
     ]
   },
   {
-    question: "Tezlik cheklangan bo‘lsa, buning ma’nosi?",
+    question: "Tezlik cheklangan bo‘lsa, buning ma’nosi❓",
     correct: "Belgilangan tezlikdan oshirmaslik",
     wrong: [
       "Hech narsa qilmaslik",
@@ -68,7 +68,7 @@ const baseQuestions = [
     ]
   },
   {
-    question: "Yo‘l belgisi: stop belgisi nimani anglatadi?",
+    question: "Yo‘l belgisi: stop belgisi nimani anglatadi❓",
     correct: "To‘xtash va yo‘l berish",
     wrong: [
       "Faqat vaqtinchalik to‘xtash",
@@ -77,7 +77,7 @@ const baseQuestions = [
     ]
   },
   {
-    question: "Yo‘l chizig‘i uzundan cho‘zilgan oq chiziq nima anglatadi?",
+    question: "Yo‘l chizig‘i uzundan cho‘zilgan oq chiziq nima anglatadi❓",
     correct: "Chiziqlarni kesib o‘tish mumkin emas",
     wrong: [
       "Har doim to‘xtash kerak",
@@ -86,7 +86,7 @@ const baseQuestions = [
     ]
   },
   {
-    question: "Qaysi vaziyatda yangi tormoz masofasi uzun bo‘ladi?",
+    question: "Qaysi vaziyatda yangi tormoz masofasi uzun bo‘ladi❓",
     correct: "Yo‘l sirpanchiq bo‘lsa",
     wrong: [
       "Fakr tez bo‘lmasa",
